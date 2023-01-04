@@ -17,7 +17,7 @@ func (s Sample) Value() float64 {
 }
 
 func ToSample(bytes []byte) []Sample {
-	ret := make([]Sample, len(bytes)//BytesPerSample)
+	ret := make([]Sample, len(bytes)/BytesPerSample)
 	for i := 0; i < len(bytes)/BytesPerSample; i++ {
 		ret[i] = toSample(bytes[i*BytesPerSample : i*BytesPerSample+BytesPerSample])
 	}
