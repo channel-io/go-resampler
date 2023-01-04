@@ -9,7 +9,7 @@ import (
 
 const WAVHeaderSize = 44
 
-func TestResampleFastWav(t *testing.T) {
+func TestDownSampleFast(t *testing.T) {
 	target := readWav("./example/timeout.wav")
 	pcm48000 := ToSample(target)
 
@@ -22,7 +22,7 @@ func TestResampleFastWav(t *testing.T) {
 	writeWav("./example/timeout_8000_fast.wav", ToBytes(pcm8000), 8000)
 }
 
-func TestResampleBestWav(t *testing.T) {
+func TestDownSampleBestWav(t *testing.T) {
 	target := readWav("./example/timeout.wav")
 	pcm48000 := ToSample(target)
 
@@ -33,6 +33,32 @@ func TestResampleBestWav(t *testing.T) {
 	pcm8000 := s.Resample(pcm48000)
 
 	writeWav("./example/timeout_8000_best.wav", ToBytes(pcm8000), 8000)
+}
+
+func TestUpSampleFast(t *testing.T) {
+	target := readWav("./example/timeout_8000.wav")
+	pcm8000 := ToSample(target)
+
+	s, err := New(false, 8000, 48000)
+	if err != nil {
+		panic(err)
+	}
+	pcm48000 := s.Resample(pcm8000)
+
+	writeWav("./example/timeout_48000_fast.wav", ToBytes(pcm48000), 48000)
+}
+
+func TestUpSampleBest(t *testing.T) {
+	target := readWav("./example/timeout_8000.wav")
+	pcm8000 := ToSample(target)
+
+	s, err := New(false, 8000, 48000)
+	if err != nil {
+		panic(err)
+	}
+	pcm48000 := s.Resample(pcm8000)
+
+	writeWav("./example/timeout_48000_best.wav", ToBytes(pcm48000), 48000)
 }
 
 func readWav(path string) []byte {
