@@ -5,10 +5,8 @@ import (
 )
 
 const (
-	SampleMaxValue = float64(32768)
-	BytesPerSample = 2
-	BestPrecision  = 8192
-	FastPrecision  = 512
+	BestPrecision = 8192
+	FastPrecision = 512
 )
 
 type ReSampler struct {

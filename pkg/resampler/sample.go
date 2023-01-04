@@ -5,6 +5,11 @@ import (
 	"encoding/binary"
 )
 
+const (
+	BytesPerSample = 2
+	SampleMaxValue = 32768
+)
+
 type Sample float32
 
 func (s Sample) Value() float64 {
