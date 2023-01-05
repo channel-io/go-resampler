@@ -1,4 +1,4 @@
-package resampler
+package refloat32r
 
 import (
 	"bytes"
@@ -6,32 +6,26 @@ import (
 )
 
 const (
-	BytesPerSample = 2
-	SampleMaxValue = 32768
+	BytesPerfloat32 = 2
+	sampleMaxValue  = 32768
 )
 
-type Sample float32
-
-func (s Sample) Value() float64 {
-	return float64(s)
-}
-
-func ToSample(bytes []byte) []Sample {
-	ret := make([]Sample, len(bytes)/BytesPerSample)
-	for i := 0; i < len(bytes)/BytesPerSample; i++ {
-		ret[i] = toSample(bytes[i*BytesPerSample : i*BytesPerSample+BytesPerSample])
+func ToSample(bytes []byte) []float32 {
+	ret := make([]float32, len(bytes)/BytesPerfloat32)
+	for i := 0; i < len(bytes)/BytesPerfloat32; i++ {
+		ret[i] = toSample(bytes[i*BytesPerfloat32 : i*BytesPerfloat32+BytesPerfloat32])
 	}
 	return ret
 }
 
-func toSample(sample []byte) Sample {
-	return Sample(float64(int16(binary.LittleEndian.Uint16(sample))) / SampleMaxValue)
+func toSample(samples []byte) float32 {
+	return float32(int16(binary.LittleEndian.Uint16(samples))) / sampleMaxValue
 }
 
-func ToBytes(samples []Sample) []byte {
+func ToBytes(float32s []float32) []byte {
 	var buf bytes.Buffer
-	for _, s := range samples {
-		_ = binary.Write(&buf, binary.LittleEndian, uint16(float64(s)*SampleMaxValue))
+	for _, s := range float32s {
+		_ = binary.Write(&buf, binary.LittleEndian, uint16(float64(s)*sampleMaxValue))
 	}
 	return buf.Bytes()
 }

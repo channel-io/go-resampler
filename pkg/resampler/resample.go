@@ -1,25 +1,21 @@
-package resampler
+package refloat32r
 
 import (
 	"math"
 )
 
-const (
-	PaddingSize = 300
-)
-
-type ReSampler struct {
-	filter      []float64
-	filterDelta []float64
-	precision   int
-	from        int
-	to          int
-	buf         []Sample
-	bufOffset   int
-	timeStamp   TimeStamp
+type Refloat32r struct {
+	filter        []float64
+	filterDelta   []float64
+	precision     int
+	from          int
+	to            int
+	timeStamp     float64
+	timeStampIncr float64
+	window        *window
 }
 
-func New(highQuality bool, from int, to int) (*ReSampler, error) {
+func New(highQuality bool, from int, to int) (*Refloat32r, error) {
 
 	var filter []float64
 	var precision int
@@ -31,113 +27,84 @@ func New(highQuality bool, from int, to int) (*ReSampler, error) {
 		precision = FastPrecision
 	}
 
-	sampleRatio := float64(to) / float64(from)
-	if sampleRatio < 1.0 {
-		multiply(filter, sampleRatio)
+	float32Ratio := float64(to) / float64(from)
+	if float32Ratio < 1.0 {
+		multiply(filter, float32Ratio)
 	}
 
-	return &ReSampler{
-		filter:      filter,
-		filterDelta: deltaOf(filter),
-		precision:   precision,
-		from:        from,
-		to:          to,
-		timeStamp: TimeStamp{
-			incr: 1.0 / (float64(to) / float64(from)),
-			idx:  0,
-		},
-		buf: make([]Sample, PaddingSize),
+	return &Refloat32r{
+		filter:        filter,
+		filterDelta:   deltaOf(filter),
+		precision:     precision,
+		from:          from,
+		to:            to,
+		timeStampIncr: 1.0 / (float64(to) / float64(from)),
+		window:        newWindow(),
 	}, nil
 }
 
-func (r *ReSampler) supply(buf []Sample) {
-	useless := r.current() - PaddingSize
-	if useless > 0 {
-		r.buf = r.buf[useless:]
-		r.bufOffset += useless
-	}
-	r.buf = append(r.buf, buf...)
-}
-
-func (r *ReSampler) current() int {
-	return r.posInBuf(r.timeStamp)
-}
-
-func (r *ReSampler) posInBuf(t TimeStamp) int {
-	return t.floored() - r.bufOffset
-}
-
-func (r *ReSampler) Resample(in []Sample) []Sample {
+func (r *Refloat32r) ReSample(in []float32) []float32 {
 	r.supply(in)
 	return r.read()
 }
 
-func (r *ReSampler) read() []Sample {
-	var ret []Sample
+func (r *Refloat32r) supply(buf []float32) {
+	for _, b := range buf {
+		_ = r.window.push(b)
+	}
+}
+
+func (r *Refloat32r) read() []float32 {
+	var ret []float32
 
 	scale := math.Min(float64(r.to)/float64(r.from), 1.0)
 	indexStep := int(scale * float64(r.precision))
-
 	nWin := len(r.filter)
-	nOrig := len(r.buf)
 
-	for r.current()+PaddingSize < len(r.buf) {
+	for r.window.hasEnoughPadding() {
 
-		var sample Sample
+		var sample float32
 
-		n := int(r.timeStamp.value())
-		frac := scale * (r.timeStamp.value() - float64(n))
+		frac := scale * (r.timeStamp - float64(r.window.cursor()))
 
 		indexFrac := frac * float64(r.precision)
 		offset := int(indexFrac)
 
 		eta := indexFrac - float64(offset)
-		iMax := min(n+1, (nWin-offset)/indexStep)
+		iMax := min(r.window.cursor()+1, (nWin-offset)/indexStep)
 
 		for i := 0; i < iMax; i++ {
 			idx := offset + i*indexStep
 			weight := r.filter[idx] + r.filterDelta[idx]*eta
-			sample += Sample(weight * float64(r.buf[r.current()-i]))
+			s, err := r.window.get(-i)
+			if err != nil {
+				panic(err)
+			}
+			sample += float32(weight * float64(s))
 		}
 
 		frac = scale - frac
 		indexFrac = frac * float64(r.precision)
 		offset = int(indexFrac)
 		eta = indexFrac - float64(offset)
-		kMax := min(nOrig-n-1, (nWin-offset)/indexStep)
+		kMax := min(r.window.rightPadding()-1, (nWin-offset)/indexStep)
 
 		for k := 0; k < kMax; k++ {
 			idx := offset + k*indexStep
 			weight := r.filter[idx] + r.filterDelta[idx]*eta
-			sample += Sample(float64(r.buf[r.current()+k+1]) * weight)
+			s, err := r.window.get(k + 1)
+			if err != nil {
+				panic(err)
+			}
+			sample += float32(weight * float64(s))
 		}
 
 		ret = append(ret, sample)
-		r.timeStamp = r.timeStamp.increase()
+
+		beforeCur := int(r.timeStamp)
+		r.timeStamp += r.timeStampIncr
+		afterCur := int(r.timeStamp)
+		r.window.increaseCursor(afterCur - beforeCur)
 	}
 	return ret
-}
-
-type TimeStamp struct {
-	idx  int
-	incr float64
-}
-
-func (o TimeStamp) value() float64 {
-	return o.incr * float64(o.idx)
-}
-
-func (o TimeStamp) floored() int {
-	return int(o.value())
-}
-
-func (o TimeStamp) increaseBy(n int) TimeStamp {
-	return TimeStamp{
-		idx:  o.idx + n,
-		incr: o.incr,
-	}
-}
-
-func (o TimeStamp) increase() TimeStamp {
-	return o.increaseBy(1)
 }

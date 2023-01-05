@@ -1,4 +1,4 @@
-package resampler
+package refloat32r
 
 func multiply(raw []float64, val float64) {
 	for i, _ := range raw {
@@ -21,12 +21,4 @@ func min(a int, b int) int {
 		return a
 	}
 	return b
-}
-
-func permutationOf(inc float64, len int) []float64 {
-	ret := make([]float64, len)
-	for i := 0; i < len; i++ {
-		ret[i] = inc * float64(i)
-	}
-	return ret
 }
