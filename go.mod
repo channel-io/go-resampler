@@ -1,4 +1,4 @@
-module go-resampler
+module github.com/channel-io/go-resampler
 
 go 1.19
 
