@@ -23,7 +23,7 @@ func TestDownSampleFast(t *testing.T) {
 		samples = append(samples, reSampled...)
 	}
 
-	writeWav("./example/timeout_8000_best.wav", ToBytes(samples), 8000)
+	writeWav("./example/timeout_8000_fast.wav", ToBytes(samples), 8000)
 }
 
 func readWav(path string) []byte {
