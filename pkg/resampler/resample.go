@@ -26,9 +26,9 @@ func New(highQuality bool, from int, to int) (*ReSampler, error) {
 		precision = FastPrecision
 	}
 
-	float32Ratio := float64(to) / float64(from)
-	if float32Ratio < 1.0 {
-		multiply(filter, float32Ratio)
+	sampleRatio := float64(to) / float64(from)
+	if sampleRatio < 1.0 {
+		multiply(filter, sampleRatio)
 	}
 
 	return &ReSampler{
