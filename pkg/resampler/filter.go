@@ -5,6 +5,7 @@ import (
 	"embed"
 	"encoding/binary"
 	"io"
+	"path/filepath"
 )
 
 //go:embed filter
@@ -16,7 +17,7 @@ type filter struct {
 }
 
 func loadFilter(name string) (*filter, error) {
-	f, err := fs.Open("filter/" + name + ".filter")
+	f, err := fs.Open("filter" + string(filepath.Separator) + name + ".filter")
 	if err != nil {
 		return nil, err
 	}
