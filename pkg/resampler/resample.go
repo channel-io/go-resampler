@@ -5,14 +5,13 @@ import (
 )
 
 type ReSampler struct {
-	filter        []float64
-	filterDelta   []float64
-	precision     int
-	from          int
-	to            int
-	timeStampIdx  int
-	timeStampIncr float64
-	window        *window
+	filter       []float64
+	filterDelta  []float64
+	precision    int
+	from         int
+	to           int
+	timeStampIdx int
+	window       *window
 }
 
 func New(highQuality bool, from int, to int) (*ReSampler, error) {
@@ -33,13 +32,12 @@ func New(highQuality bool, from int, to int) (*ReSampler, error) {
 	}
 
 	return &ReSampler{
-		filter:        filter,
-		filterDelta:   deltaOf(filter),
-		precision:     precision,
-		from:          from,
-		to:            to,
-		timeStampIncr: 1.0 / (float64(to) / float64(from)),
-		window:        newWindow(),
+		filter:      filter,
+		filterDelta: deltaOf(filter),
+		precision:   precision,
+		from:        from,
+		to:          to,
+		window:      newWindow(),
 	}, nil
 }
 
