@@ -49,7 +49,7 @@ func writeWav(path string, bytes []byte, float32Rate uint32) {
 	}
 	defer f.Close()
 
-	w := wav.NewWriter(f, uint32(len(bytes)/BytesPerfloat32), 1, float32Rate, BytesPerfloat32*8)
+	w := wav.NewWriter(f, uint32(len(bytes)/BytesPerSample), 1, float32Rate, BytesPerSample*8)
 
 	if _, err := w.Write(bytes); err != nil {
 		panic(err)

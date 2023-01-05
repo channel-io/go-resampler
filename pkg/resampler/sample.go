@@ -6,14 +6,14 @@ import (
 )
 
 const (
-	BytesPerfloat32 = 2
-	sampleMaxValue  = 32768
+	BytesPerSample = 2
+	sampleMaxValue = 32768
 )
 
 func ToSample(bytes []byte) []float32 {
-	ret := make([]float32, len(bytes)/BytesPerfloat32)
-	for i := 0; i < len(bytes)/BytesPerfloat32; i++ {
-		ret[i] = toSample(bytes[i*BytesPerfloat32 : i*BytesPerfloat32+BytesPerfloat32])
+	ret := make([]float32, len(bytes)/BytesPerSample)
+	for i := 0; i < len(bytes)/BytesPerSample; i++ {
+		ret[i] = toSample(bytes[i*BytesPerSample : i*BytesPerSample+BytesPerSample])
 	}
 	return ret
 }
