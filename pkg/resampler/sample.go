@@ -1,4 +1,4 @@
-package refloat32r
+package resampler
 
 import (
 	"bytes"

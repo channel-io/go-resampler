@@ -1,4 +1,4 @@
-package refloat32r
+package resampler
 
 func multiply(raw []float64, val float64) {
 	for i, _ := range raw {
