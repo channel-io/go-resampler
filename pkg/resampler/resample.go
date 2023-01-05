@@ -15,26 +15,26 @@ type ReSampler struct {
 }
 
 func New(highQuality bool, from int, to int) (*ReSampler, error) {
-
-	var filter []float64
-	var precision int
+	var filterName string
 	if highQuality {
-		filter = kaiserBest
-		precision = BestPrecision
+		filterName = "kaiserBest"
 	} else {
-		filter = kaiserFast
-		precision = FastPrecision
+		filterName = "kaiserFast"
+	}
+	f, err := loadFilter(filterName)
+	if err != nil {
+		return nil, err
 	}
 
 	sampleRatio := float64(to) / float64(from)
 	if sampleRatio < 1.0 {
-		multiply(filter, sampleRatio)
+		multiply(f.arr, sampleRatio)
 	}
 
 	return &ReSampler{
-		filter:      filter,
-		filterDelta: deltaOf(filter),
-		precision:   precision,
+		filter:      f.arr,
+		filterDelta: deltaOf(f.arr),
+		precision:   int(f.precision),
 		from:        from,
 		to:          to,
 		window:      newWindow(),

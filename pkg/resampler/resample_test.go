@@ -14,7 +14,10 @@ func TestDownSampleFast(t *testing.T) {
 	target := readWav("./example/timeout.wav")
 	pcm48000 := ToSample(target)
 
-	s, _ := New(false, 48000, 8000)
+	s, err := New(false, 48000, 8000)
+	if err != nil {
+		panic(err)
+	}
 
 	readSize := 960
 	var samples []float32
@@ -31,7 +34,10 @@ func TestUpSampleFast(t *testing.T) {
 	target := readWav("./example/timeout_8000.wav")
 	pcm48000 := ToSample(target)
 
-	s, _ := New(false, 8000, 48000)
+	s, err := New(false, 8000, 48000)
+	if err != nil {
+		panic(err)
+	}
 
 	readSize := 160
 	var samples []float32
@@ -48,7 +54,10 @@ func TestDownSampleRandomSize(t *testing.T) {
 	target := readWav("./example/timeout.wav")
 	pcm48000 := ToSample(target)
 
-	s, _ := New(false, 48000, 8000)
+	s, err := New(false, 48000, 8000)
+	if err != nil {
+		panic(err)
+	}
 
 	var samples []float32
 
