@@ -8,6 +8,7 @@ import (
 const bufSize = 10000
 const paddingSize = 300
 
+// input sample 누적을 위한 원형 큐
 type window struct {
 	buf   [bufSize]float32
 	cur   int
@@ -35,9 +36,14 @@ func (w *window) rightPadding() int {
 	return w.right - w.cur
 }
 
-func (w *window) increaseCursor(delta int) {
-	w.cur += delta
+func (w *window) increaseCursor(delta int) error {
+	newCursor := w.cur + delta
+	if newCursor > w.right {
+		return errors.New("cursor is out of range")
+	}
+	w.cur = newCursor
 	w.left = max(w.cur-paddingSize, 0)
+	return nil
 }
 
 func (w *window) get(offset int) (float32, error) {

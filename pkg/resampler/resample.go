@@ -106,7 +106,10 @@ func (r *ReSampler) read() []float32 {
 		beforeCur := int(timestamp)
 		r.timeStampIdx++
 		afterCur := int(r.timestamp())
-		r.window.increaseCursor(afterCur - beforeCur)
+		// TODO: handle error, panic 은 임시, 코드 문제가 아니라면 일어나지 않는 에러
+		if err := r.window.increaseCursor(afterCur - beforeCur); err != nil {
+			panic(err)
+		}
 	}
 	return ret
 }
