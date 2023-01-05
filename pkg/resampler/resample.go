@@ -4,6 +4,11 @@ import (
 	"math"
 )
 
+const (
+	HighQualityFilter = "kaiserBest"
+	FastQualityFilter = "kaiserFast"
+)
+
 type ReSampler struct {
 	filter       []float64
 	filterDelta  []float64
@@ -17,9 +22,9 @@ type ReSampler struct {
 func New(highQuality bool, from int, to int) (*ReSampler, error) {
 	var filterName string
 	if highQuality {
-		filterName = "kaiserBest"
+		filterName = HighQualityFilter
 	} else {
-		filterName = "kaiserFast"
+		filterName = FastQualityFilter
 	}
 	f, err := loadFilter(filterName)
 	if err != nil {
