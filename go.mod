@@ -1,4 +1,4 @@
-module refloat32r
+module resampler
 
 go 1.19
 
