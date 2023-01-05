@@ -2,6 +2,7 @@ package resampler
 
 import (
 	"io"
+	"math/rand"
 	"os"
 	"testing"
 
@@ -38,6 +39,43 @@ func TestUpSampleFast(t *testing.T) {
 		reSampled := s.ReSample(pcm48000[i : i+readSize])
 		assert.Equal(t, readSize*6, len(reSampled))
 		samples = append(samples, reSampled...)
+	}
+
+	writeWav("./example/timeout_48000_fast.wav", ToBytes(samples), 48000)
+}
+
+func TestDownSampleRandomSize(t *testing.T) {
+	target := readWav("./example/timeout.wav")
+	pcm48000 := ToSample(target)
+
+	s, _ := New(false, 48000, 8000)
+
+	var samples []float32
+
+	readSize := 960
+	for i := readSize; i < len(pcm48000); i += readSize {
+		reSampled := s.ReSample(pcm48000[i-readSize : i])
+		assert.Equal(t, readSize/6, len(reSampled))
+		samples = append(samples, reSampled...)
+		readSize = rand.Intn(100) * 6
+	}
+
+	writeWav("./example/timeout_8000_fast.wav", ToBytes(samples), 8000)
+}
+
+func TestUpSampleRandomSize(t *testing.T) {
+	target := readWav("./example/timeout_8000.wav")
+	pcm48000 := ToSample(target)
+
+	s, _ := New(false, 8000, 48000)
+
+	readSize := 160
+	var samples []float32
+	for i := readSize; i < len(pcm48000); i += readSize {
+		reSampled := s.ReSample(pcm48000[i-readSize : i])
+		assert.Equal(t, readSize*6, len(reSampled))
+		samples = append(samples, reSampled...)
+		readSize = rand.Intn(500)
 	}
 
 	writeWav("./example/timeout_48000_fast.wav", ToBytes(samples), 48000)
