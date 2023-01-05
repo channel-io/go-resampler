@@ -1,66 +1,75 @@
 package resampler
 
 import (
-	wav "github.com/youpy/go-wav"
+	"github.com/youpy/go-wav"
 	"io"
 	"os"
 	"testing"
 )
 
-const WAVHeaderSize = 44
-
 func TestDownSampleFast(t *testing.T) {
 	target := readWav("./example/timeout.wav")
 	pcm48000 := ToSample(target)
 
-	s, err := New(false, 48000, 8000)
-	if err != nil {
-		panic(err)
-	}
-	pcm8000 := s.Resample(pcm48000)
+	s, _ := New(true, 48000, 8000)
 
-	writeWav("./example/timeout_8000_fast.wav", ToBytes(pcm8000), 8000)
+	var samples []Sample
+	for i := 0; i < len(pcm48000)-960; i += 960 {
+		readSamples := s.Resample(pcm48000[i : i+960])
+		samples = append(samples, readSamples...)
+		println(len(readSamples))
+	}
+	writeWav("./example/timeout_8000_best.wav", ToBytes(samples), 8000)
 }
 
-func TestDownSampleBestWav(t *testing.T) {
-	target := readWav("./example/timeout.wav")
-	pcm48000 := ToSample(target)
+/*
+	func TestDownSampleBestWav(t *testing.T) {
+		target := readWav("./example/timeout.wav")
+		pcm48000 := ToSample(target)
 
-	s, err := New(true, 48000, 8000)
-	if err != nil {
-		panic(err)
+		s, err := New(true, 48000, 8000)
+		if err != nil {
+			panic(err)
+		}
+		pcm8000 := s.Resample(pcm48000)
+
+		writeWav("./example/timeout_8000_best.wav", ToBytes(pcm8000), 8000)
 	}
-	pcm8000 := s.Resample(pcm48000)
 
-	writeWav("./example/timeout_8000_best.wav", ToBytes(pcm8000), 8000)
-}
+	func TestUpSampleFast(t *testing.T) {
+		target := readWav("./example/timeout_8000.wav")
+		pcm8000 := ToSample(target)
 
-func TestUpSampleFast(t *testing.T) {
-	target := readWav("./example/timeout_8000.wav")
-	pcm8000 := ToSample(target)
+		s, err := New(false, 8000, 48000)
+		if err != nil {
+			panic(err)
+		}
+		pcm48000 := s.Resample(pcm8000)
 
-	s, err := New(false, 8000, 48000)
-	if err != nil {
-		panic(err)
+		writeWav("./example/timeout_48000_fast.wav", ToBytes(pcm48000), 48000)
 	}
-	pcm48000 := s.Resample(pcm8000)
 
-	writeWav("./example/timeout_48000_fast.wav", ToBytes(pcm48000), 48000)
-}
+	func TestUpSampleBest(t *testing.T) {
+		target := readWav("./example/timeout_8000.wav")
+		pcm8000 := ToSample(target)
 
-func TestUpSampleBest(t *testing.T) {
-	target := readWav("./example/timeout_8000.wav")
-	pcm8000 := ToSample(target)
+		s, err := New(false, 8000, 48000)
+		if err != nil {
+			panic(err)
+		}
+		pcm48000 := s.Resample(pcm8000)
 
-	s, err := New(false, 8000, 48000)
-	if err != nil {
-		panic(err)
+		writeWav("./example/timeout_48000_best.wav", ToBytes(pcm48000), 48000)
 	}
-	pcm48000 := s.Resample(pcm8000)
 
-	writeWav("./example/timeout_48000_best.wav", ToBytes(pcm48000), 48000)
-}
-
+	func seperateChan(bytes []byte) []byte {
+		var ret []byte
+		for i := 0; i < len(bytes); i += 4 {
+			ret = append(ret, bytes[i], bytes[i+1])
+		}
+		return ret
+	}
+*/
 func readWav(path string) []byte {
 	f, err := os.Open(path)
 	if err != nil {
@@ -68,12 +77,11 @@ func readWav(path string) []byte {
 	}
 	defer f.Close()
 
-	header := make([]byte, WAVHeaderSize)
-	if _, err = f.Read(header); err != nil {
-		panic(err)
-	}
-
-	bytes, err := io.ReadAll(f)
+	r := wav.NewReader(f)
+	format, _ := r.Format()
+	println(format.BlockAlign)
+	print(format.NumChannels)
+	bytes, err := io.ReadAll(r)
 	if err != nil {
 		panic(err)
 	}

@@ -5,8 +5,7 @@ import (
 )
 
 const (
-	BestPrecision = 8192
-	FastPrecision = 512
+	PaddingSize = 300
 )
 
 type ReSampler struct {
@@ -15,6 +14,9 @@ type ReSampler struct {
 	precision   int
 	from        int
 	to          int
+	buf         []Sample
+	bufOffset   int
+	timeStamp   TimeStamp
 }
 
 func New(highQuality bool, from int, to int) (*ReSampler, error) {
@@ -40,39 +42,62 @@ func New(highQuality bool, from int, to int) (*ReSampler, error) {
 		precision:   precision,
 		from:        from,
 		to:          to,
+		timeStamp: TimeStamp{
+			incr: 1.0 / (float64(to) / float64(from)),
+			idx:  0,
+		},
+		buf: make([]Sample, PaddingSize),
 	}, nil
 }
 
-func (r *ReSampler) Resample(src []Sample) []Sample {
-	ret := make([]Sample, int(float64(len(src))*float64(r.to)/float64(r.from)))
-	sampleRatio := float64(r.to) / float64(r.from)
-	scale := math.Min(sampleRatio, 1.0)
-	timeIncrement := 1.0 / sampleRatio
-	tOut := permutationOf(timeIncrement, len(ret))
-	r.doResample(src, ret, tOut, scale)
-	return ret
+func (r *ReSampler) supply(buf []Sample) {
+	useless := r.current() - PaddingSize
+	if useless > 0 {
+		r.buf = r.buf[useless:]
+		r.bufOffset += useless
+	}
+	r.buf = append(r.buf, buf...)
 }
 
-func (r *ReSampler) doResample(src []Sample, dst []Sample, tOut []float64, scale float64) {
+func (r *ReSampler) current() int {
+	return r.posInBuf(r.timeStamp)
+}
+
+func (r *ReSampler) posInBuf(t TimeStamp) int {
+	return t.floored() - r.bufOffset
+}
+
+func (r *ReSampler) Resample(in []Sample) []Sample {
+	r.supply(in)
+	return r.read()
+}
+
+func (r *ReSampler) read() []Sample {
+	var ret []Sample
+
+	scale := math.Min(float64(r.to)/float64(r.from), 1.0)
 	indexStep := int(scale * float64(r.precision))
 
 	nWin := len(r.filter)
-	nOrig := len(src)
+	nOrig := len(r.buf)
 
-	for t, timeRegister := range tOut {
-		n := int(timeRegister)
-		frac := scale * (timeRegister - float64(n))
+	for r.current()+PaddingSize < len(r.buf) {
+
+		var sample Sample
+
+		n := int(r.timeStamp.value())
+		frac := scale * (r.timeStamp.value() - float64(n))
 
 		indexFrac := frac * float64(r.precision)
 		offset := int(indexFrac)
 
 		eta := indexFrac - float64(offset)
-
 		iMax := min(n+1, (nWin-offset)/indexStep)
+
 		for i := 0; i < iMax; i++ {
 			idx := offset + i*indexStep
 			weight := r.filter[idx] + r.filterDelta[idx]*eta
-			dst[t] += Sample(weight * float64(src[n-i]))
+			sample += Sample(weight * float64(r.buf[r.current()-i]))
 		}
 
 		frac = scale - frac
@@ -84,7 +109,35 @@ func (r *ReSampler) doResample(src []Sample, dst []Sample, tOut []float64, scale
 		for k := 0; k < kMax; k++ {
 			idx := offset + k*indexStep
 			weight := r.filter[idx] + r.filterDelta[idx]*eta
-			dst[t] += Sample(float64(src[n+k+1]) * weight)
+			sample += Sample(float64(r.buf[r.current()+k+1]) * weight)
 		}
+
+		ret = append(ret, sample)
+		r.timeStamp = r.timeStamp.increase()
 	}
+	return ret
+}
+
+type TimeStamp struct {
+	idx  int
+	incr float64
+}
+
+func (o TimeStamp) value() float64 {
+	return o.incr * float64(o.idx)
+}
+
+func (o TimeStamp) floored() int {
+	return int(o.value())
+}
+
+func (o TimeStamp) increaseBy(n int) TimeStamp {
+	return TimeStamp{
+		idx:  o.idx + n,
+		incr: o.incr,
+	}
+}
+
+func (o TimeStamp) increase() TimeStamp {
+	return o.increaseBy(1)
 }
