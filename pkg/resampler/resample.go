@@ -4,18 +4,18 @@ import (
 	"math"
 )
 
-type Refloat32r struct {
+type ReSampler struct {
 	filter        []float64
 	filterDelta   []float64
 	precision     int
 	from          int
 	to            int
-	timeStamp     float64
+	timeStampIdx  int
 	timeStampIncr float64
 	window        *window
 }
 
-func New(highQuality bool, from int, to int) (*Refloat32r, error) {
+func New(highQuality bool, from int, to int) (*ReSampler, error) {
 
 	var filter []float64
 	var precision int
@@ -32,7 +32,7 @@ func New(highQuality bool, from int, to int) (*Refloat32r, error) {
 		multiply(filter, float32Ratio)
 	}
 
-	return &Refloat32r{
+	return &ReSampler{
 		filter:        filter,
 		filterDelta:   deltaOf(filter),
 		precision:     precision,
@@ -43,18 +43,18 @@ func New(highQuality bool, from int, to int) (*Refloat32r, error) {
 	}, nil
 }
 
-func (r *Refloat32r) ReSample(in []float32) []float32 {
+func (r *ReSampler) ReSample(in []float32) []float32 {
 	r.supply(in)
 	return r.read()
 }
 
-func (r *Refloat32r) supply(buf []float32) {
+func (r *ReSampler) supply(buf []float32) {
 	for _, b := range buf {
 		_ = r.window.push(b)
 	}
 }
 
-func (r *Refloat32r) read() []float32 {
+func (r *ReSampler) read() []float32 {
 	var ret []float32
 
 	scale := math.Min(float64(r.to)/float64(r.from), 1.0)
@@ -65,7 +65,9 @@ func (r *Refloat32r) read() []float32 {
 
 		var sample float32
 
-		frac := scale * (r.timeStamp - float64(r.window.cursor()))
+		timestamp := r.timestamp()
+
+		frac := scale * (timestamp - float64(r.window.cursor()))
 
 		indexFrac := frac * float64(r.precision)
 		offset := int(indexFrac)
@@ -101,10 +103,14 @@ func (r *Refloat32r) read() []float32 {
 
 		ret = append(ret, sample)
 
-		beforeCur := int(r.timeStamp)
-		r.timeStamp += r.timeStampIncr
-		afterCur := int(r.timeStamp)
+		beforeCur := int(timestamp)
+		r.timeStampIdx++
+		afterCur := int(r.timestamp())
 		r.window.increaseCursor(afterCur - beforeCur)
 	}
 	return ret
+}
+
+func (r *ReSampler) timestamp() float64 {
+	return float64(r.timeStampIdx) * float64(r.from) / float64(r.to)
 }
