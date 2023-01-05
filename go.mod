@@ -1,4 +1,4 @@
-module resampler
+module go-resampler
 
 go 1.19
 
