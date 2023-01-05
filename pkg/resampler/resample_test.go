@@ -13,17 +13,17 @@ func TestDownSampleFast(t *testing.T) {
 	target := readWav("./example/timeout.wav")
 	pcm48000 := ToSample(target)
 
-	s, _ := New(true, 48000, 8000)
+	s, _ := New(false, 48000, 8000)
 
 	readSize := 960
-	var float32s []float32
+	var samples []float32
 	for i := 0; i < len(pcm48000)-readSize; i += readSize {
 		reSampled := s.ReSample(pcm48000[i : i+readSize])
 		assert.Equal(t, readSize/6, len(reSampled))
-		float32s = append(float32s, reSampled...)
+		samples = append(samples, reSampled...)
 	}
 
-	writeWav("./example/timeout_8000_best.wav", ToBytes(float32s), 8000)
+	writeWav("./example/timeout_8000_best.wav", ToBytes(samples), 8000)
 }
 
 func readWav(path string) []byte {
