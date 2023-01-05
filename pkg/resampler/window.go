@@ -23,6 +23,10 @@ func (w *window) cursor() int {
 	return w.cur
 }
 
+func (w *window) leftPadding() int {
+	return w.cur - w.left
+}
+
 func (w *window) hasEnoughPadding() bool {
 	return w.rightPadding() > paddingSize
 }

@@ -71,12 +71,13 @@ func (r *ReSampler) read() []float32 {
 		offset := int(indexFrac)
 
 		eta := indexFrac - float64(offset)
-		iMax := min(r.window.cursor()+1, (nWin-offset)/indexStep)
+		iMax := min(r.window.leftPadding()+1, (nWin-offset)/indexStep)
 
 		for i := 0; i < iMax; i++ {
 			idx := offset + i*indexStep
 			weight := r.filter[idx] + r.filterDelta[idx]*eta
 			s, err := r.window.get(-i)
+			// TODO: handle error, panic 은 임시, 코드 문제가 아니라면 일어나지 않는 에러
 			if err != nil {
 				panic(err)
 			}
@@ -93,6 +94,7 @@ func (r *ReSampler) read() []float32 {
 			idx := offset + k*indexStep
 			weight := r.filter[idx] + r.filterDelta[idx]*eta
 			s, err := r.window.get(k + 1)
+			// TODO: handle error, panic 은 임시, 코드 문제가 아니라면 일어나지 않는 에러
 			if err != nil {
 				panic(err)
 			}
