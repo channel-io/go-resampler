@@ -36,6 +36,10 @@ func (w *window) rightPadding() int {
 	return w.right - w.cur
 }
 
+func (w *window) capacity() int {
+	return bufSize - (w.right - w.left)
+}
+
 func (w *window) increaseCursor(delta int) error {
 	newCursor := w.cur + delta
 	if newCursor > w.right {

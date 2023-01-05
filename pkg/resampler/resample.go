@@ -1,6 +1,7 @@
 package resampler
 
 import (
+	"fmt"
 	"math"
 )
 
@@ -46,15 +47,21 @@ func New(highQuality bool, from int, to int) (*ReSampler, error) {
 	}, nil
 }
 
-func (r *ReSampler) ReSample(in []float32) []float32 {
-	r.supply(in)
-	return r.read()
+func (r *ReSampler) ReSample(in []float32) ([]float32, error) {
+	if err := r.supply(in); err != nil {
+		return nil, err
+	}
+	return r.read(), nil
 }
 
-func (r *ReSampler) supply(buf []float32) {
+func (r *ReSampler) supply(buf []float32) error {
+	if r.window.capacity() < len(buf) {
+		return fmt.Errorf("window capacity is not enough")
+	}
 	for _, b := range buf {
 		_ = r.window.push(b)
 	}
+	return nil
 }
 
 func (r *ReSampler) read() []float32 {
