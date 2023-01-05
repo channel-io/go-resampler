@@ -66,10 +66,8 @@ func (r *ReSampler) read() []float32 {
 		timestamp := r.timestamp()
 
 		frac := scale * (timestamp - float64(r.window.cursor()))
-
 		indexFrac := frac * float64(r.precision)
 		offset := int(indexFrac)
-
 		eta := indexFrac - float64(offset)
 		iMax := min(r.window.leftPadding()+1, (nWin-offset)/indexStep)
 
