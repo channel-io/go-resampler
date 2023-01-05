@@ -10,7 +10,7 @@ const paddingSize = 300
 
 // input sample 누적을 위한 원형 큐
 type window struct {
-	buf   [bufSize]float32
+	buf   [bufSize]float64
 	cur   int64
 	left  int64
 	right int64
@@ -50,7 +50,7 @@ func (w *window) increaseCursor(delta int) error {
 	return nil
 }
 
-func (w *window) get(offset int) (float32, error) {
+func (w *window) get(offset int) (float64, error) {
 	i := w.cur + int64(offset)
 	if w.left > i || i >= w.right {
 		return 0.0, fmt.Errorf("invalid index: %d", i)
@@ -58,7 +58,7 @@ func (w *window) get(offset int) (float32, error) {
 	return w.buf[i%bufSize], nil
 }
 
-func (w *window) push(s float32) error {
+func (w *window) push(s float64) error {
 	if w.isFull() {
 		return errors.New("window is full")
 	}

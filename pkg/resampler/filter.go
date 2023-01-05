@@ -11,9 +11,24 @@ import (
 //go:embed filter
 var fs embed.FS
 
+var fastQualityFilter *filter
+var highQualityFilter *filter
+
 type filter struct {
 	precision int32
 	arr       []float64
+}
+
+func init() {
+	var err error
+	fastQualityFilter, err = loadFilter("kaiserFast")
+	if err != nil {
+		panic(err)
+	}
+	highQualityFilter, err = loadFilter("kaiserBest")
+	if err != nil {
+		panic(err)
+	}
 }
 
 func loadFilter(name string) (*filter, error) {

@@ -5,11 +5,6 @@ import (
 	"math"
 )
 
-const (
-	HighQualityFilter = "kaiserBest"
-	FastQualityFilter = "kaiserFast"
-)
-
 type ReSampler struct {
 	filter       []float64
 	filterDelta  []float64
@@ -20,16 +15,12 @@ type ReSampler struct {
 	window       *window
 }
 
-func New(highQuality bool, from int, to int) (*ReSampler, error) {
-	var filterName string
+func New(highQuality bool, from int, to int) *ReSampler {
+	var f *filter
 	if highQuality {
-		filterName = HighQualityFilter
+		f = highQualityFilter
 	} else {
-		filterName = FastQualityFilter
-	}
-	f, err := loadFilter(filterName)
-	if err != nil {
-		return nil, err
+		f = fastQualityFilter
 	}
 
 	sampleRatio := float64(to) / float64(from)
@@ -44,17 +35,17 @@ func New(highQuality bool, from int, to int) (*ReSampler, error) {
 		from:        from,
 		to:          to,
 		window:      newWindow(),
-	}, nil
+	}
 }
 
-func (r *ReSampler) ReSample(in []float32) ([]float32, error) {
+func (r *ReSampler) Resample(in []float64) ([]float64, error) {
 	if err := r.supply(in); err != nil {
 		return nil, err
 	}
 	return r.read(), nil
 }
 
-func (r *ReSampler) supply(buf []float32) error {
+func (r *ReSampler) supply(buf []float64) error {
 	if r.window.capacity() < len(buf) {
 		return fmt.Errorf("window capacity is not enough")
 	}
@@ -64,8 +55,8 @@ func (r *ReSampler) supply(buf []float32) error {
 	return nil
 }
 
-func (r *ReSampler) read() []float32 {
-	var ret []float32
+func (r *ReSampler) read() []float64 {
+	var ret []float64
 
 	scale := math.Min(float64(r.to)/float64(r.from), 1.0)
 	indexStep := int(scale * float64(r.precision))
@@ -73,7 +64,7 @@ func (r *ReSampler) read() []float32 {
 
 	for r.window.hasEnoughPadding() {
 
-		var sample float32
+		var sample float64
 
 		timestamp := r.timestamp()
 
@@ -91,7 +82,7 @@ func (r *ReSampler) read() []float32 {
 			if err != nil {
 				panic(err)
 			}
-			sample += float32(weight * float64(s))
+			sample += weight * s
 		}
 
 		frac = scale - frac
@@ -108,7 +99,7 @@ func (r *ReSampler) read() []float32 {
 			if err != nil {
 				panic(err)
 			}
-			sample += float32(weight * float64(s))
+			sample += weight * s
 		}
 
 		ret = append(ret, sample)
