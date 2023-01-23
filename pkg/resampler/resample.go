@@ -5,7 +5,7 @@ import (
 	"math"
 )
 
-type ReSampler struct {
+type Resampler struct {
 	filter       []float64
 	filterDelta  []float64
 	precision    int
@@ -15,7 +15,7 @@ type ReSampler struct {
 	window       *window
 }
 
-func New(highQuality bool, from int, to int) *ReSampler {
+func New(highQuality bool, from int, to int) *Resampler {
 	var f *filter
 	if highQuality {
 		f = highQualityFilter
@@ -28,7 +28,7 @@ func New(highQuality bool, from int, to int) *ReSampler {
 		multiply(f.arr, sampleRatio)
 	}
 
-	return &ReSampler{
+	return &Resampler{
 		filter:      f.arr,
 		filterDelta: deltaOf(f.arr),
 		precision:   int(f.precision),
@@ -38,14 +38,14 @@ func New(highQuality bool, from int, to int) *ReSampler {
 	}
 }
 
-func (r *ReSampler) Resample(in []float64) ([]float64, error) {
+func (r *Resampler) Resample(in []float64) ([]float64, error) {
 	if err := r.supply(in); err != nil {
 		return nil, err
 	}
 	return r.read(), nil
 }
 
-func (r *ReSampler) supply(buf []float64) error {
+func (r *Resampler) supply(buf []float64) error {
 	if r.window.capacity() < len(buf) {
 		return fmt.Errorf("window capacity is not enough")
 	}
@@ -55,7 +55,7 @@ func (r *ReSampler) supply(buf []float64) error {
 	return nil
 }
 
-func (r *ReSampler) read() []float64 {
+func (r *Resampler) read() []float64 {
 	var ret []float64
 
 	scale := math.Min(float64(r.to)/float64(r.from), 1.0)
@@ -115,6 +115,6 @@ func (r *ReSampler) read() []float64 {
 	return ret
 }
 
-func (r *ReSampler) timestamp() float64 {
+func (r *Resampler) timestamp() float64 {
 	return float64(r.timeStampIdx) * float64(r.from) / float64(r.to)
 }
