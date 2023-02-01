@@ -17,6 +17,7 @@ var highQualityFilter *filter
 type filter struct {
 	precision int32
 	arr       []float64
+	delta     []float64
 }
 
 func init() {
@@ -56,7 +57,7 @@ func loadFilter(name string) (*filter, error) {
 		}
 		arr[i] = val
 	}
-	return &filter{precision: precision, arr: arr}, nil
+	return &filter{precision: precision, arr: arr, delta: deltaOf(arr)}, nil
 }
 
 func readInt(f io.Reader) (int32, error) {
