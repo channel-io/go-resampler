@@ -6,8 +6,7 @@ import (
 )
 
 type Resampler struct {
-	filter       []float64
-	filterDelta  []float64
+	filter       *filter
 	precision    int
 	from         int
 	to           int
@@ -23,18 +22,12 @@ func New(highQuality bool, from int, to int) *Resampler {
 		f = fastQualityFilter
 	}
 
-	sampleRatio := float64(to) / float64(from)
-	if sampleRatio < 1.0 {
-		multiply(f.arr, sampleRatio)
-	}
-
 	return &Resampler{
-		filter:      f.arr,
-		filterDelta: deltaOf(f.arr),
-		precision:   int(f.precision),
-		from:        from,
-		to:          to,
-		window:      newWindow(),
+		filter:    f,
+		precision: int(f.precision),
+		from:      from,
+		to:        to,
+		window:    newWindow(),
 	}
 }
 
@@ -60,7 +53,7 @@ func (r *Resampler) read() []float64 {
 
 	scale := math.Min(float64(r.to)/float64(r.from), 1.0)
 	indexStep := int(scale * float64(r.precision))
-	nWin := len(r.filter)
+	nWin := len(r.filter.arr)
 
 	for r.window.hasEnoughPadding() {
 
@@ -76,7 +69,7 @@ func (r *Resampler) read() []float64 {
 
 		for i := 0; i < iMax; i++ {
 			idx := offset + i*indexStep
-			weight := r.filter[idx] + r.filterDelta[idx]*eta
+			weight := r.filterFactor(idx) + r.deltaFactor(idx)*eta
 			s, err := r.window.get(-i)
 			// TODO: handle error, panic 은 임시, 코드 문제가 아니라면 일어나지 않는 에러
 			if err != nil {
@@ -93,7 +86,7 @@ func (r *Resampler) read() []float64 {
 
 		for k := 0; k < kMax; k++ {
 			idx := offset + k*indexStep
-			weight := r.filter[idx] + r.filterDelta[idx]*eta
+			weight := r.filterFactor(idx) + r.deltaFactor(idx)*eta
 			s, err := r.window.get(k + 1)
 			// TODO: handle error, panic 은 임시, 코드 문제가 아니라면 일어나지 않는 에러
 			if err != nil {
@@ -117,4 +110,24 @@ func (r *Resampler) read() []float64 {
 
 func (r *Resampler) timestamp() float64 {
 	return float64(r.timeStampIdx) * float64(r.from) / float64(r.to)
+}
+
+func (r *Resampler) sampleRatio() float64 {
+	return float64(r.to) / float64(r.from)
+}
+
+func (r *Resampler) filterFactor(idx int) float64 {
+	ret := r.filter.arr[idx]
+	if r.sampleRatio() < 1 {
+		ret *= r.sampleRatio()
+	}
+	return ret
+}
+
+func (r *Resampler) deltaFactor(idx int) float64 {
+	ret := r.filter.delta[idx]
+	if r.sampleRatio() < 1 {
+		ret *= r.sampleRatio()
+	}
+	return ret
 }
