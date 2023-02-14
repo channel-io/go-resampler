@@ -1,7 +1,6 @@
 package resampler
 
 import (
-	"fmt"
 	"math"
 )
 
@@ -10,7 +9,7 @@ type Resampler struct {
 	precision    int
 	from         int
 	to           int
-	timeStampIdx int
+	timeStampIdx int64
 	window       *window
 }
 
@@ -22,12 +21,17 @@ func New(highQuality bool, from int, to int) *Resampler {
 		f = fastQualityFilter
 	}
 
+	window := newWindow()
+	for i := 0; i < paddingSize; i++ {
+		window.push(0)
+	}
+
 	return &Resampler{
 		filter:    f,
 		precision: int(f.precision),
 		from:      from,
 		to:        to,
-		window:    newWindow(),
+		window:    window,
 	}
 }
 
@@ -39,11 +43,8 @@ func (r *Resampler) Resample(in []float64) ([]float64, error) {
 }
 
 func (r *Resampler) supply(buf []float64) error {
-	if r.window.capacity() < len(buf) {
-		return fmt.Errorf("window capacity is not enough")
-	}
 	for _, b := range buf {
-		_ = r.window.push(b)
+		r.window.push(b)
 	}
 	return nil
 }
@@ -52,25 +53,29 @@ func (r *Resampler) read() []float64 {
 	var ret []float64
 
 	scale := math.Min(float64(r.to)/float64(r.from), 1.0)
-	indexStep := int(scale * float64(r.precision))
-	nWin := len(r.filter.arr)
+	indexStep := int64(scale * float64(r.precision))
+	nWin := int64(len(r.filter.arr))
 
-	for r.window.hasEnoughPadding() {
+	for int64(r.timestamp()) < r.window.right-paddingSize {
 
 		var sample float64
-
 		timestamp := r.timestamp()
+		tsFlooredTmp, timestampFrac := math.Modf(timestamp)
+		timestampFloored := int64(tsFlooredTmp)
 
-		frac := scale * (timestamp - float64(r.window.cursor()))
+		leftPadding := max(0, timestampFloored-r.window.left)
+		rightPadding := max(0, r.window.right-timestampFloored-1)
+
+		frac := scale * timestampFrac
 		indexFrac := frac * float64(r.precision)
-		offset := int(indexFrac)
-		eta := indexFrac - float64(offset)
-		iMax := min(r.window.leftPadding()+1, (nWin-offset)/indexStep)
+		offsetTmp, eta := math.Modf(indexFrac)
+		offset := int64(offsetTmp)
+		iMax := min(leftPadding+1, (nWin-offset)/indexStep)
 
-		for i := 0; i < iMax; i++ {
+		for i := int64(0); i < iMax; i++ {
 			idx := offset + i*indexStep
 			weight := r.filterFactor(idx) + r.deltaFactor(idx)*eta
-			s, err := r.window.get(-i)
+			s, err := r.window.get(timestampFloored - i)
 			// TODO: handle error, panic 은 임시, 코드 문제가 아니라면 일어나지 않는 에러
 			if err != nil {
 				panic(err)
@@ -80,14 +85,14 @@ func (r *Resampler) read() []float64 {
 
 		frac = scale - frac
 		indexFrac = frac * float64(r.precision)
-		offset = int(indexFrac)
-		eta = indexFrac - float64(offset)
-		kMax := min(r.window.rightPadding()-1, (nWin-offset)/indexStep)
+		offsetTmp, eta = math.Modf(indexFrac)
+		offset = int64(offsetTmp)
+		kMax := min(rightPadding, (nWin-offset)/indexStep)
 
-		for k := 0; k < kMax; k++ {
+		for k := int64(0); k < kMax; k++ {
 			idx := offset + k*indexStep
 			weight := r.filterFactor(idx) + r.deltaFactor(idx)*eta
-			s, err := r.window.get(k + 1)
+			s, err := r.window.get(timestampFloored + k + 1)
 			// TODO: handle error, panic 은 임시, 코드 문제가 아니라면 일어나지 않는 에러
 			if err != nil {
 				panic(err)
@@ -96,14 +101,7 @@ func (r *Resampler) read() []float64 {
 		}
 
 		ret = append(ret, sample)
-
-		beforeCur := int(timestamp)
 		r.timeStampIdx++
-		afterCur := int(r.timestamp())
-		// TODO: handle error, panic 은 임시, 코드 문제가 아니라면 일어나지 않는 에러
-		if err := r.window.increaseCursor(afterCur - beforeCur); err != nil {
-			panic(err)
-		}
 	}
 	return ret
 }
@@ -116,7 +114,7 @@ func (r *Resampler) sampleRatio() float64 {
 	return float64(r.to) / float64(r.from)
 }
 
-func (r *Resampler) filterFactor(idx int) float64 {
+func (r *Resampler) filterFactor(idx int64) float64 {
 	ret := r.filter.arr[idx]
 	if r.sampleRatio() < 1 {
 		ret *= r.sampleRatio()
@@ -124,7 +122,7 @@ func (r *Resampler) filterFactor(idx int) float64 {
 	return ret
 }
 
-func (r *Resampler) deltaFactor(idx int) float64 {
+func (r *Resampler) deltaFactor(idx int64) float64 {
 	ret := r.filter.delta[idx]
 	if r.sampleRatio() < 1 {
 		ret *= r.sampleRatio()
