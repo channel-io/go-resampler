@@ -16,7 +16,7 @@ func deltaOf(raw []float64) []float64 {
 	return ret
 }
 
-func min(a int, b int) int {
+func min(a int64, b int64) int64 {
 	if a < b {
 		return a
 	}
