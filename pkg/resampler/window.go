@@ -4,7 +4,8 @@ import (
 	"fmt"
 )
 
-const bufSize = 10000
+const bufSize = int64(8192)
+const maxBufIdx = bufSize - 1
 const paddingSize = 300
 
 // input sample 누적을 위한 원형 큐
@@ -22,11 +23,11 @@ func (w *window) get(i int64) (float64, error) {
 	if w.left > i || i >= w.right {
 		return 0.0, fmt.Errorf("invalid index: %d", i)
 	}
-	return w.buf[i%bufSize], nil
+	return w.buf[i&maxBufIdx], nil
 }
 
 func (w *window) push(s float64) {
-	w.buf[w.right%bufSize] = s
+	w.buf[w.right&maxBufIdx] = s
 	w.right++
 	w.left = max(w.right-bufSize, w.left)
 }
