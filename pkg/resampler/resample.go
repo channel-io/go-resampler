@@ -60,7 +60,8 @@ func (r *Resampler) supply(buf []float64) error {
 }
 
 func (r *Resampler) read() []float64 {
-	var ret []float64
+	size := math.Ceil(r.sampleRatio * (float64(r.window.right-paddingSize) - r.timestamp()))
+	ret := make([]float64, 0, int64(size))
 	nWin := int64(len(r.filter.arr))
 
 	for {
