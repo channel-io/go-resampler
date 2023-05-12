@@ -5,16 +5,17 @@ import (
 )
 
 type Resampler struct {
-	filter       *filter
-	precision    int
-	from         int
-	to           int
-	timeStampIdx int64
-	window       *window
+	from int
+	to   int
 
-	scale       float64
-	sampleRatio float64
-	indexStep   int64
+	filter *filter
+	window *window
+
+	indexStep    int64
+	scale        float64
+	timeStampIdx int64
+	sampleRatio  float64
+	precision    int
 }
 
 func New(highQuality bool, from int, to int) *Resampler {
@@ -26,9 +27,7 @@ func New(highQuality bool, from int, to int) *Resampler {
 	}
 
 	window := newWindow()
-	for i := 0; i < paddingSize; i++ {
-		window.push(0)
-	}
+	window.push(make([]float64, paddingSize))
 
 	sampleRatio := float64(to) / float64(from)
 	scale := math.Min(sampleRatio, 1.0)
@@ -52,10 +51,7 @@ func (r *Resampler) Resample(in []float64) []float64 {
 }
 
 func (r *Resampler) supply(buf []float64) {
-	for _, b := range buf {
-		r.window.push(b)
-	}
-	r.window.tighten()
+	r.window.push(buf)
 }
 
 func (r *Resampler) read() []float64 {
@@ -74,8 +70,8 @@ func (r *Resampler) read() []float64 {
 			break
 		}
 
-		leftPadding := max(0, timestampFloored-r.window.left)
-		rightPadding := max(0, r.window.right-timestampFloored-1)
+		leftPadding := timestampFloored - r.window.left
+		rightPadding := r.window.right - timestampFloored - 1
 
 		frac := r.scale * timestampFrac
 		indexFrac := frac * float64(r.precision)

@@ -6,9 +6,9 @@ const paddingSize = 300
 
 // input sample 누적을 위한 원형 큐
 type window struct {
-	buf   [bufSize]float64
 	left  int64
 	right int64
+	buf   [bufSize]float64
 }
 
 func newWindow() *window {
@@ -19,13 +19,15 @@ func (w *window) get(i int64) float64 {
 	return w.buf[i&maxBufIdx]
 }
 
-func (w *window) push(s float64) {
-	w.buf[w.right&maxBufIdx] = s
-	w.right++
-}
+func (w *window) push(buf []float64) {
+	for _, s := range buf {
+		w.buf[w.right&maxBufIdx] = s
+		w.right++
+	}
 
-func (w *window) tighten() {
-	w.left = max(w.right-bufSize, w.left)
+	if newVal := w.right - bufSize; newVal > w.left {
+		w.left = newVal
+	}
 }
 
 func (w *window) isFull() bool {
