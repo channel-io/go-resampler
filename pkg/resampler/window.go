@@ -1,6 +1,6 @@
 package resampler
 
-const bufSize = int64(8192)
+const bufSize = int64(8192) // 2^13
 const maxBufIdx = bufSize - 1
 const paddingSize = 300
 
@@ -22,6 +22,9 @@ func (w *window) get(i int64) float64 {
 func (w *window) push(s float64) {
 	w.buf[w.right&maxBufIdx] = s
 	w.right++
+}
+
+func (w *window) tighten() {
 	w.left = max(w.right-bufSize, w.left)
 }
 

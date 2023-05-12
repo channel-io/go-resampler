@@ -33,6 +33,7 @@ func New(highQuality bool, from int, to int) *Resampler {
 	sampleRatio := float64(to) / float64(from)
 	scale := math.Min(sampleRatio, 1.0)
 	indexStep := int64(scale * float64(int(f.precision)))
+
 	return &Resampler{
 		filter:      f,
 		precision:   int(f.precision),
@@ -45,18 +46,16 @@ func New(highQuality bool, from int, to int) *Resampler {
 	}
 }
 
-func (r *Resampler) Resample(in []float64) ([]float64, error) {
-	if err := r.supply(in); err != nil {
-		return nil, err
-	}
-	return r.read(), nil
+func (r *Resampler) Resample(in []float64) []float64 {
+	r.supply(in)
+	return r.read()
 }
 
-func (r *Resampler) supply(buf []float64) error {
+func (r *Resampler) supply(buf []float64) {
 	for _, b := range buf {
 		r.window.push(b)
 	}
-	return nil
+	r.window.tighten()
 }
 
 func (r *Resampler) read() []float64 {
@@ -85,8 +84,9 @@ func (r *Resampler) read() []float64 {
 		iMax := min(leftPadding+1, (nWin-offset)/r.indexStep)
 
 		idx := offset
+		deltaFactor := r.scale * eta
 		for i := int64(0); i < iMax; i++ {
-			weight := r.filterFactor(idx) + r.deltaFactor(idx)*eta
+			weight := r.filter.arr[idx]*r.scale + r.filter.delta[idx]*deltaFactor
 			sample += weight * r.window.get(timestampFloored-i)
 			idx += r.indexStep
 		}
@@ -98,8 +98,9 @@ func (r *Resampler) read() []float64 {
 		kMax := min(rightPadding, (nWin-offset)/r.indexStep)
 
 		idx = offset
+		deltaFactor = r.scale * eta
 		for k := int64(0); k < kMax; k++ {
-			weight := r.filterFactor(idx) + r.deltaFactor(idx)*eta
+			weight := r.filter.arr[idx]*r.scale + r.filter.delta[idx]*deltaFactor
 			sample += weight * r.window.get(timestampFloored+k+1)
 			idx += r.indexStep
 		}
@@ -112,20 +113,4 @@ func (r *Resampler) read() []float64 {
 
 func (r *Resampler) timestamp() float64 {
 	return float64(r.timeStampIdx) * float64(r.from) / float64(r.to)
-}
-
-func (r *Resampler) filterFactor(idx int64) float64 {
-	ret := r.filter.arr[idx]
-	if r.sampleRatio < 1 {
-		ret *= r.sampleRatio
-	}
-	return ret
-}
-
-func (r *Resampler) deltaFactor(idx int64) float64 {
-	ret := r.filter.delta[idx]
-	if r.sampleRatio < 1 {
-		ret *= r.sampleRatio
-	}
-	return ret
 }
