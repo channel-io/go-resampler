@@ -63,12 +63,16 @@ func (r *Resampler) read() []float64 {
 	var ret []float64
 	nWin := int64(len(r.filter.arr))
 
-	for int64(r.timestamp()) < r.window.right-paddingSize {
+	for {
 
 		var sample float64
 		timestamp := r.timestamp()
 		tsFlooredTmp, timestampFrac := math.Modf(timestamp)
 		timestampFloored := int64(tsFlooredTmp)
+
+		if timestampFloored >= r.window.right-paddingSize {
+			break
+		}
 
 		leftPadding := max(0, timestampFloored-r.window.left)
 		rightPadding := max(0, r.window.right-timestampFloored-1)
