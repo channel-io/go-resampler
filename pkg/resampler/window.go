@@ -1,9 +1,5 @@
 package resampler
 
-import (
-	"fmt"
-)
-
 const bufSize = int64(8192)
 const maxBufIdx = bufSize - 1
 const paddingSize = 300
@@ -19,11 +15,8 @@ func newWindow() *window {
 	return &window{}
 }
 
-func (w *window) get(i int64) (float64, error) {
-	if w.left > i || i >= w.right {
-		return 0.0, fmt.Errorf("invalid index: %d", i)
-	}
-	return w.buf[i&maxBufIdx], nil
+func (w *window) get(i int64) float64 {
+	return w.buf[i&maxBufIdx]
 }
 
 func (w *window) push(s float64) {
