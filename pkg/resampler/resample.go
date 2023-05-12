@@ -84,10 +84,11 @@ func (r *Resampler) read() []float64 {
 		offset := int64(offsetTmp)
 		iMax := min(leftPadding+1, (nWin-offset)/r.indexStep)
 
+		idx := offset
 		for i := int64(0); i < iMax; i++ {
-			idx := offset + i*r.indexStep
 			weight := r.filterFactor(idx) + r.deltaFactor(idx)*eta
 			sample += weight * r.window.get(timestampFloored-i)
+			idx += r.indexStep
 		}
 
 		frac = r.scale - frac
@@ -96,10 +97,11 @@ func (r *Resampler) read() []float64 {
 		offset = int64(offsetTmp)
 		kMax := min(rightPadding, (nWin-offset)/r.indexStep)
 
+		idx = offset
 		for k := int64(0); k < kMax; k++ {
-			idx := offset + k*r.indexStep
 			weight := r.filterFactor(idx) + r.deltaFactor(idx)*eta
 			sample += weight * r.window.get(timestampFloored+k+1)
+			idx += r.indexStep
 		}
 
 		ret = append(ret, sample)
