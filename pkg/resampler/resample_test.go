@@ -17,10 +17,10 @@ func TestDownSampleFast(t *testing.T) {
 	s := New(false, 48000, 8000)
 
 	readSize := 960
+	println("size ", len(pcm48000)/readSize)
 	var samples []float64
 	for i := 0; i < len(pcm48000)-readSize; i += readSize {
-		reSampled, err := s.Resample(pcm48000[i : i+readSize])
-		assert.NilError(t, err)
+		reSampled := s.Resample(pcm48000[i : i+readSize])
 		assert.Equal(t, readSize/6, len(reSampled))
 		samples = append(samples, reSampled...)
 	}
@@ -37,8 +37,7 @@ func TestUpSampleFast(t *testing.T) {
 	readSize := 160
 	var samples []float64
 	for i := 0; i < len(pcm48000)-readSize; i += readSize {
-		reSampled, err := s.Resample(pcm48000[i : i+readSize])
-		assert.NilError(t, err)
+		reSampled := s.Resample(pcm48000[i : i+readSize])
 		assert.Equal(t, readSize*6, len(reSampled))
 		samples = append(samples, reSampled...)
 	}
@@ -56,8 +55,7 @@ func TestDownSampleRandomSize(t *testing.T) {
 
 	readSize := 960
 	for i := readSize; i < len(pcm48000); i += readSize {
-		reSampled, err := s.Resample(pcm48000[i-readSize : i])
-		assert.NilError(t, err)
+		reSampled := s.Resample(pcm48000[i-readSize : i])
 		assert.Equal(t, readSize/6, len(reSampled))
 		samples = append(samples, reSampled...)
 		readSize = rand.Intn(100) * 6
@@ -75,21 +73,13 @@ func TestUpSampleRandomSize(t *testing.T) {
 	readSize := 160
 	var samples []float64
 	for i := readSize; i < len(pcm48000); i += readSize {
-		reSampled, err := s.Resample(pcm48000[i-readSize : i])
-		assert.NilError(t, err)
+		reSampled := s.Resample(pcm48000[i-readSize : i])
 		assert.Equal(t, readSize*6, len(reSampled))
 		samples = append(samples, reSampled...)
 		readSize = rand.Intn(500)
 	}
 
 	writeWav("./example/timeout_48000_fast.wav", ToBytes(samples), 48000)
-}
-
-func TestTooBigInput(t *testing.T) {
-	s := New(false, 8000, 48000)
-
-	_, err := s.Resample(make([]float64, bufSize*2))
-	assert.Error(t, err, "window capacity is not enough")
 }
 
 func readWav(path string) []byte {
