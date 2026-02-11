@@ -82,6 +82,81 @@ func TestUpSampleRandomSize(t *testing.T) {
 	writeWav("./example/timeout_48000_fast.wav", ToBytes(samples), 48000)
 }
 
+func TestResampleLargeInput(t *testing.T) {
+	target := readWav("./example/timeout.wav")
+	pcm48000 := ToSample(target)
+
+	// 8192 초과 입력
+	largeInput := pcm48000
+	if len(largeInput) < 16000 {
+		t.Fatal("test wav too small")
+	}
+	largeInput = largeInput[:16000]
+
+	s := New(false, 48000, 8000)
+	result := s.Resample(largeInput)
+
+	expectedLen := int(float64(len(largeInput)) * 8000.0 / 48000.0)
+	diff := expectedLen - len(result)
+	if diff < 0 {
+		diff = -diff
+	}
+	if diff > 2 {
+		t.Fatalf("expected output length ~%d, got %d", expectedLen, len(result))
+	}
+}
+
+func TestResampleChunkingEquivalence(t *testing.T) {
+	target := readWav("./example/timeout.wav")
+	pcm48000 := ToSample(target)
+
+	input := pcm48000
+	if len(input) < 16000 {
+		t.Fatal("test wav too small")
+	}
+	input = input[:16000]
+
+	// 한 번에 호출
+	s1 := New(false, 48000, 8000)
+	single := s1.Resample(input)
+
+	// 수동으로 safeChunkSize씩 쪼개서 호출
+	s2 := New(false, 48000, 8000)
+	var chunked []float64
+	for offset := 0; offset < len(input); offset += safeChunkSize {
+		end := offset + safeChunkSize
+		if end > len(input) {
+			end = len(input)
+		}
+		chunked = append(chunked, s2.Resample(input[offset:end])...)
+	}
+
+	assert.Equal(t, len(single), len(chunked))
+	for i := range single {
+		if single[i] != chunked[i] {
+			t.Fatalf("sample mismatch at index %d: %f != %f", i, single[i], chunked[i])
+		}
+	}
+}
+
+func TestResampleSmallInputUnchanged(t *testing.T) {
+	target := readWav("./example/timeout.wav")
+	pcm48000 := ToSample(target)
+
+	s := New(false, 48000, 8000)
+
+	readSize := 960
+	var samples []float64
+	for i := 0; i < len(pcm48000)-readSize; i += readSize {
+		reSampled := s.Resample(pcm48000[i : i+readSize])
+		assert.Equal(t, readSize/6, len(reSampled))
+		samples = append(samples, reSampled...)
+	}
+
+	// 기존 TestDownSampleFast와 동일한 로직 — 회귀 확인
+	assert.Equal(t, true, len(samples) > 0)
+}
+
 func readWav(path string) []byte {
 	f, err := os.Open(path)
 	if err != nil {
