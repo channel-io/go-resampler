@@ -46,8 +46,21 @@ func New(highQuality bool, from int, to int) *Resampler {
 }
 
 func (r *Resampler) Resample(in []float64) []float64 {
-	r.supply(in)
-	return r.read()
+	if len(in) <= safeChunkSize {
+		r.supply(in)
+		return r.read()
+	}
+
+	var result []float64
+	for offset := 0; offset < len(in); offset += safeChunkSize {
+		end := offset + safeChunkSize
+		if end > len(in) {
+			end = len(in)
+		}
+		r.supply(in[offset:end])
+		result = append(result, r.read()...)
+	}
+	return result
 }
 
 func (r *Resampler) supply(buf []float64) {

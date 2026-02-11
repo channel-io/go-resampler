@@ -3,6 +3,7 @@ package resampler
 const bufSize = int64(8192) // 2^13
 const maxBufIdx = bufSize - 1
 const paddingSize = 300
+const safeChunkSize = int(bufSize - 2*paddingSize) // 7592
 
 // input sample 누적을 위한 원형 큐
 type window struct {
